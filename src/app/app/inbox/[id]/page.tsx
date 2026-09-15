@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { IconArrowRight, IconHandoff, IconMail } from '@/components/ui/icons';
-import { AccessNotice, Badge } from '@/components/ui/misc';
+import { AccessNotice, Badge, FormMessage } from '@/components/ui/misc';
 import { prisma, withTenant } from '@/lib/db';
 import { isAppError } from '@/lib/errors';
 import { cx } from '@/lib/cx';
@@ -88,8 +88,15 @@ function describeBlock(block: ReplyBlock): string {
   }
 }
 
-export default async function ConversationPage({ params }: { params: Promise<{ id: string }> }) {
-  const data = await load((await params).id);
+export default async function ConversationPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ email?: string }>;
+}) {
+  const [{ id }, { email: emailOutcome }] = await Promise.all([params, searchParams]);
+  const data = await load(id);
   if (data === null) notFound();
   if ('denied' in data) return <AccessNotice what="the inbox" />;
   const { dashboard, conversation, handoffAudit, team, now } = data;
@@ -104,6 +111,14 @@ export default async function ConversationPage({ params }: { params: Promise<{ i
         <Link href="/app/inbox" className="text-sm text-ink-2 hover:text-ink">
           ← Inbox
         </Link>
+        {emailOutcome && (
+          <FormMessage tone="info" className="mt-3">
+            Simulated email received.{' '}
+            {emailOutcome === 'answered'
+              ? 'Relay found the answer in your knowledge base and replied — the reply is in the email outbox.'
+              : 'Relay could not answer it safely, so it sent an acknowledgement and handed the conversation to the team.'}
+          </FormMessage>
+        )}
         <div className="mt-3 flex flex-col gap-4 border-b border-rule pb-5 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <div className="flex flex-wrap items-center gap-2">

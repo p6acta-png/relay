@@ -4,6 +4,7 @@ import { useActionState, useState } from 'react';
 import { SelectField, TextField } from '@/components/ui/field';
 import { FormMessage } from '@/components/ui/misc';
 import { SubmitButton } from '@/components/ui/submit-button';
+import { submitWithoutReset } from '@/components/ui/submit-without-reset';
 import { fieldError, IDLE_RESULT, previousValue } from '@/lib/action-result';
 import { createBusinessAction } from './actions';
 
@@ -46,7 +47,7 @@ function Section({
 }
 
 export function OnboardingForm({ ownerName }: { ownerName: string }) {
-  const [state, formAction] = useActionState(createBusinessAction, IDLE_RESULT);
+  const [state, formAction, pending] = useActionState(createBusinessAction, IDLE_RESULT);
   const [name, setName] = useState(previousValue(state, 'businessName') ?? '');
   const [slug, setSlug] = useState(previousValue(state, 'slug') ?? '');
   const [slugEdited, setSlugEdited] = useState(false);
@@ -55,7 +56,7 @@ export function OnboardingForm({ ownerName }: { ownerName: string }) {
   const prev = (n: string, fallback = '') => previousValue(state, n) ?? fallback;
 
   return (
-    <form action={formAction} className="mt-8" noValidate>
+    <form onSubmit={submitWithoutReset(formAction)} className="mt-8" noValidate>
       {!state.ok && (
         <FormMessage tone="error" className="mb-6">
           {state.message}
@@ -195,7 +196,7 @@ export function OnboardingForm({ ownerName }: { ownerName: string }) {
       </Section>
 
       <div className="flex items-center justify-end gap-3 border-t border-rule pt-6">
-        <SubmitButton size="lg" pendingLabel="Setting up…">
+        <SubmitButton size="lg" pending={pending} pendingLabel="Setting up…">
           Create business
         </SubmitButton>
       </div>

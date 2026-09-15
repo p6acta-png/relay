@@ -203,6 +203,8 @@ async function executeAction(
     case 'send_chat_reply': {
       authorizeIn(scope, ctx, 'inbox.reply');
       if (!context.conversation) return { detail: 'No conversation to reply in.', skipped: true };
+      // A chat reply would sit unseen in an email thread; email conversations use "Email the customer".
+      if (context.channel !== 'WEB_CHAT') return { detail: 'Not a chat conversation.', skipped: true };
       await addMessage(scope, {
         conversationId: context.conversation.id,
         author: 'ASSISTANT',

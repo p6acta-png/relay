@@ -7,9 +7,11 @@ import { Button } from './button';
 export function SubmitButton({
   children,
   pendingLabel,
+  pending: pendingProp,
   ...props
-}: React.ComponentProps<typeof Button> & { pendingLabel?: string }) {
-  const { pending } = useFormStatus();
+}: React.ComponentProps<typeof Button> & { pendingLabel?: string; pending?: boolean }) {
+  // `pending` is passed by forms that submit through a transition, where useFormStatus stays idle.
+  const pending = useFormStatus().pending || Boolean(pendingProp);
   return (
     <Button type="submit" disabled={pending || props.disabled} {...props}>
       {pending ? (

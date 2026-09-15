@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { TextField } from '@/components/ui/field';
 import { FormMessage } from '@/components/ui/misc';
 import { SubmitButton } from '@/components/ui/submit-button';
+import { submitWithoutReset } from '@/components/ui/submit-without-reset';
 import { IDLE_RESULT, type ActionResult } from '@/lib/action-result';
 import { cancelBookingAction, decideBookingAction, rescheduleBookingAction } from '../actions';
 import { SlotPicker } from '../_components/slot-picker';
@@ -29,7 +30,7 @@ export function BookingActions({
   const [mode, setMode] = useState<Mode>(null);
   const [decideState, decide] = useActionState(decideBookingAction, IDLE_RESULT);
   const [cancelState, cancel] = useActionState(cancelBookingAction, IDLE_RESULT);
-  const [moveState, move] = useActionState(rescheduleBookingAction, IDLE_RESULT);
+  const [moveState, move, moving] = useActionState(rescheduleBookingAction, IDLE_RESULT);
   const results: ActionResult[] = [decideState, cancelState, moveState];
   const error = results.find((r) => !r.ok);
   const success = results.find((r) => r.ok && r.message);
@@ -102,10 +103,10 @@ export function BookingActions({
       </div>
 
       {mode === 'reschedule' && (
-        <form action={move} className="space-y-4 border-t border-rule pt-4">
+        <form onSubmit={submitWithoutReset(move)} className="space-y-4 border-t border-rule pt-4">
           <input type="hidden" name="bookingId" value={bookingId} />
           <SlotPicker serviceId={serviceId} initialDate={date} minDate={today} excludeBookingId={bookingId} />
-          <SubmitButton size="sm" pendingLabel="Moving…">
+          <SubmitButton size="sm" pending={moving} pendingLabel="Moving…">
             Move booking
           </SubmitButton>
         </form>

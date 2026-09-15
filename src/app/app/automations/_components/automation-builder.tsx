@@ -6,6 +6,7 @@ import { controlClasses } from '@/components/ui/field';
 import { IconClose, IconPlus } from '@/components/ui/icons';
 import { FormMessage } from '@/components/ui/misc';
 import { SubmitButton } from '@/components/ui/submit-button';
+import { submitWithoutReset } from '@/components/ui/submit-without-reset';
 import { IDLE_RESULT } from '@/lib/action-result';
 import { cx } from '@/lib/cx';
 import {
@@ -56,7 +57,7 @@ export function AutomationBuilder({
   initial: AutomationDefinition;
   options: Options;
 }) {
-  const [state, formAction] = useActionState(saveAutomationAction, IDLE_RESULT);
+  const [state, formAction, pending] = useActionState(saveAutomationAction, IDLE_RESULT);
   const [def, setDef] = useState<AutomationDefinition>(initial);
   const formId = useId();
   const errors = state.ok ? {} : (state.fieldErrors ?? {});
@@ -82,7 +83,11 @@ export function AutomationBuilder({
     setDef((d) => ({ ...d, actions: d.actions.map((a, i) => (i === index ? next : a)) }));
 
   return (
-    <form action={formAction} className="space-y-6" aria-describedby={`${formId}-sentence`}>
+    <form
+      onSubmit={submitWithoutReset(formAction)}
+      className="space-y-6"
+      aria-describedby={`${formId}-sentence`}
+    >
       {id && <input type="hidden" name="id" value={id} />}
       <input type="hidden" name="definition" value={JSON.stringify(def)} />
       {!state.ok && <FormMessage tone="error">{state.message}</FormMessage>}
@@ -242,7 +247,9 @@ export function AutomationBuilder({
       </Step>
 
       <div className="flex justify-end">
-        <SubmitButton pendingLabel="Saving…">{id ? 'Save changes' : 'Create automation'}</SubmitButton>
+        <SubmitButton pending={pending} pendingLabel="Saving…">
+          {id ? 'Save changes' : 'Create automation'}
+        </SubmitButton>
       </div>
     </form>
   );

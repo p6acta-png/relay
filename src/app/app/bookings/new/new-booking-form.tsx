@@ -4,6 +4,7 @@ import { useActionState, useState } from 'react';
 import { SelectField, TextArea, TextField } from '@/components/ui/field';
 import { FormMessage } from '@/components/ui/misc';
 import { SubmitButton } from '@/components/ui/submit-button';
+import { submitWithoutReset } from '@/components/ui/submit-without-reset';
 import { fieldError, IDLE_RESULT, previousValue } from '@/lib/action-result';
 import { createBookingAction } from '../actions';
 import { SlotPicker } from '../_components/slot-picker';
@@ -15,12 +16,12 @@ export function NewBookingForm({
   services: { id: string; label: string }[];
   today: string;
 }) {
-  const [state, formAction] = useActionState(createBookingAction, IDLE_RESULT);
+  const [state, formAction, pending] = useActionState(createBookingAction, IDLE_RESULT);
   const [serviceId, setServiceId] = useState(previousValue(state, 'serviceId') ?? '');
   const err = (name: string) => fieldError(state, name) ?? fieldError(state, `customer.${name}`);
 
   return (
-    <form action={formAction} className="space-y-8" noValidate>
+    <form onSubmit={submitWithoutReset(formAction)} className="space-y-8" noValidate>
       {!state.ok && <FormMessage tone="error">{state.message}</FormMessage>}
 
       <section className="space-y-5 rounded-[var(--radius-lg)] border border-rule bg-surface p-5">
@@ -83,7 +84,7 @@ export function NewBookingForm({
       </section>
 
       <div className="flex justify-end">
-        <SubmitButton size="lg" pendingLabel="Booking…">
+        <SubmitButton size="lg" pending={pending} pendingLabel="Booking…">
           Create booking
         </SubmitButton>
       </div>

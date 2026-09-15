@@ -505,11 +505,18 @@ async function seedWorkshop(users: Map<string, { id: string; name: string }>) {
     const { db, organizationId } = scope;
 
     // Team
-    const membership = async (email: string, role: 'OWNER' | 'ADMIN' | 'STAFF') =>
-      tx.membership.create({ data: { organizationId, userId: users.get(email)!.id, role } });
-    const ingridM = await membership('ingrid@eikogkant.example', 'OWNER');
-    const aminaM = await membership('amina@eikogkant.example', 'ADMIN');
-    const jonasM = await membership('jonas@eikogkant.example', 'STAFF');
+    const membership = async (email: string, role: 'OWNER' | 'ADMIN' | 'STAFF', joinedDaysAgo: number) =>
+      tx.membership.create({
+        data: {
+          organizationId,
+          userId: users.get(email)!.id,
+          role,
+          createdAt: new Date(now.getTime() - joinedDaysAgo * 24 * HOUR),
+        },
+      });
+    const ingridM = await membership('ingrid@eikogkant.example', 'OWNER', 60);
+    const aminaM = await membership('amina@eikogkant.example', 'ADMIN', 58);
+    const jonasM = await membership('jonas@eikogkant.example', 'STAFF', 51);
     const members = { ingrid: ingridM, amina: aminaM, jonas: jonasM };
 
     const staff = {
