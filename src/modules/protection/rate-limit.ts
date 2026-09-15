@@ -32,6 +32,7 @@ export const RATE_LIMITS = {
   chatMessageByIp: { name: 'chat-msg-ip', limit: 60, windowSeconds: 5 * 60 },
   chatMessageByConversation: { name: 'chat-msg-convo', limit: 25, windowSeconds: 5 * 60 },
   manageBookingByIp: { name: 'manage-booking-ip', limit: 30, windowSeconds: 15 * 60 },
+  chatPollByIp: { name: 'chat-poll-ip', limit: 240, windowSeconds: 10 * 60 },
 } as const satisfies Record<string, RateLimitRule>;
 
 /** Hash identifiers (IP addresses, emails) so rate-limit rows never contain personal data. */

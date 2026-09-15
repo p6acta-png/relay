@@ -123,7 +123,7 @@ function defaultSuggestions(): ReplyBlock {
   return {
     type: 'quick_replies',
     options: [
-      quick('Book a service', { kind: 'text', text: 'I’d like to book a service' }),
+      quick('Book a time', { kind: 'text', text: 'I’d like to book a time' }),
       quick('Prices', { kind: 'text', text: 'What are your prices?' }),
       quick('Opening hours', { kind: 'text', text: 'When are you open?' }),
       quick('Talk to a person', { kind: 'talk_to_human' }),
@@ -131,7 +131,7 @@ function defaultSuggestions(): ReplyBlock {
   };
 }
 
-export function welcomeReply(business: FlowBusiness): AssistantReply {
+export function welcomeReply(business: Pick<FlowBusiness, 'name'>): AssistantReply {
   return {
     body: `Hi! I’m the automated assistant for ${business.name}. I can book you in, answer questions about prices and opening hours, or pass you to someone at the workshop.`,
     blocks: [defaultSuggestions()],
@@ -405,7 +405,7 @@ class Flow {
     return this.result(
       [
         {
-          body: `${intro}${detail ? `\n(${detail}.${approval})` : ''}`,
+          body: `${intro}${detail ? `\n${detail.charAt(0).toUpperCase()}${detail.slice(1)}.${approval}` : ''}`,
           blocks: [
             {
               type: 'slot_options',
@@ -633,7 +633,7 @@ class Flow {
       options: [
         service && service.kind === 'BOOKABLE'
           ? quick(`Book ${service.name.toLowerCase()}`, { kind: 'choose_service', serviceId: service.id })
-          : quick('Book a service', { kind: 'text', text: 'I’d like to book a service' }),
+          : quick('Book a time', { kind: 'text', text: 'I’d like to book a time' }),
         quick('Talk to a person', { kind: 'talk_to_human' }),
       ],
     };

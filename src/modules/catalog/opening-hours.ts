@@ -1,5 +1,12 @@
 import { z } from 'zod';
-import { isoWeekday, localMinutesOfDay, minutesToTime, toLocalDate, WEEKDAY_SHORT } from '@/lib/time';
+import {
+  isoWeekday,
+  localMinutesOfDay,
+  minutesToTime,
+  toLocalDate,
+  WEEKDAY_NAMES,
+  WEEKDAY_SHORT,
+} from '@/lib/time';
 
 /** Weekly opening hours stored as JSON on Organization. Validated on every read and write. */
 export const openingHoursSchema = z
@@ -25,6 +32,30 @@ export function isOpenAt(hours: OpeningHours, instant: Date, timeZone: string): 
   const weekday = isoWeekday(toLocalDate(instant, timeZone));
   const minute = localMinutesOfDay(instant, timeZone);
   return hours.some((range) => range.weekday === weekday && minute >= range.opens && minute < range.closes);
+}
+
+/**
+ * "Open now · closes 17:00" or "Closed · opens tomorrow at 09:00".
+ * Looks up to a week ahead in the business's own time zone.
+ */
+export function describeOpenStatus(hours: OpeningHours, instant: Date, timeZone: string) {
+  const today = toLocalDate(instant, timeZone);
+  const minute = localMinutesOfDay(instant, timeZone);
+  const weekday = isoWeekday(today);
+  const current = hours.find((r) => r.weekday === weekday && minute >= r.opens && minute < r.closes);
+  if (current) return { open: true, label: `Open now · closes ${minutesToTime(current.closes)}` };
+
+  for (let ahead = 0; ahead < 7; ahead++) {
+    const day = ((weekday - 1 + ahead) % 7) + 1;
+    const next = hours
+      .filter((r) => r.weekday === day && (ahead > 0 || r.opens > minute))
+      .sort((a, b) => a.opens - b.opens)[0];
+    if (next) {
+      const when = ahead === 0 ? 'today' : ahead === 1 ? 'tomorrow' : WEEKDAY_NAMES[day - 1];
+      return { open: false, label: `Closed · opens ${when} at ${minutesToTime(next.opens)}` };
+    }
+  }
+  return { open: false, label: 'Closed' };
 }
 
 /** Groups consecutive days with identical hours: ["Mon–Fri 08:00–17:00", "Sat 10:00–14:00", "Sun closed"]. */

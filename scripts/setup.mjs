@@ -46,7 +46,8 @@ for (const [label, ownerUrlKey, appUrlKey] of [
 
 if (!skipSeed) {
   step('Seed demo data');
-  node(['--import', 'tsx', 'prisma/seed.ts']);
+  // react-server condition: lets the seed import app modules marked `server-only`.
+  node(['--conditions=react-server', '--import', 'tsx', 'prisma/seed.ts']);
 }
 
 console.log(`
