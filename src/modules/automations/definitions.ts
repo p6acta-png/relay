@@ -64,6 +64,7 @@ export type Condition = z.infer<typeof conditionSchema>;
 /** Placeholders a business may use in messages. Anything else is rejected when saving. */
 export const TEMPLATE_VARIABLES = [
   'customer.firstName',
+  'customer.name',
   'business.name',
   'service.name',
   'booking.when',

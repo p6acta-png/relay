@@ -192,10 +192,12 @@ export async function listConversations(
     include: {
       customer: { select: { id: true, name: true, email: true } },
       assignee: { select: { id: true, user: { select: { name: true } } } },
+      // Latest few customer messages; the list shows the one that says what they need.
       messages: {
+        where: { author: 'CUSTOMER' },
         orderBy: { createdAt: 'desc' },
-        take: 1,
-        select: { body: true, author: true, createdAt: true },
+        take: 6,
+        select: { body: true },
       },
       _count: { select: { bookings: true, leads: true } },
     },

@@ -20,7 +20,7 @@ export function defaultAutomations(): AutomationDefinition[] {
         },
         {
           type: 'create_task',
-          title: 'Reply to {{customer.firstName}}',
+          title: 'Reply to {{customer.name}}',
           kind: 'HANDOFF',
           dueInHours: 4,
           assigneeId: null,

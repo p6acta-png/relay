@@ -143,3 +143,17 @@ export interface AssistantReply {
 }
 
 export const replyBlocksSchema = z.array(replyBlockSchema);
+
+/** Transcript labels for structured inputs that say nothing about what the customer needs. */
+const PROCEDURAL_LABELS = new Set([
+  'Shared contact details',
+  'Confirm',
+  'Choose another time',
+  'Show me more times',
+  'Start over',
+]);
+
+/** The most recent customer message worth previewing (skips "Confirm", "Shared contact details", …). */
+export function previewCustomerMessage(messages: { body: string }[]): string | null {
+  return messages.find((m) => !PROCEDURAL_LABELS.has(m.body))?.body ?? messages[0]?.body ?? null;
+}

@@ -80,3 +80,27 @@ export const WEEKDAY_SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] a
 export function formatSlot(instant: Date, timeZone: string): string {
   return formatInZone(instant, timeZone, 'EEE d MMM, HH:mm');
 }
+
+/** "just now", "12 min ago", "3 h ago", "yesterday 14:05", "12 Sep". */
+export function formatRelative(instant: Date, now: Date, timeZone: string): string {
+  const minutes = Math.round((now.getTime() - instant.getTime()) / 60_000);
+  if (minutes < 1) return 'just now';
+  if (minutes < 60) return `${minutes} min ago`;
+  if (minutes < 12 * 60 && toLocalDate(instant, timeZone) === toLocalDate(now, timeZone)) {
+    return `${Math.round(minutes / 60)} h ago`;
+  }
+  if (toLocalDate(instant, timeZone) === toLocalDate(now, timeZone))
+    return formatInZone(instant, timeZone, "'today' HH:mm");
+  if (toLocalDate(instant, timeZone) === addDays(toLocalDate(now, timeZone), -1)) {
+    return formatInZone(instant, timeZone, "'yesterday' HH:mm");
+  }
+  return formatInZone(instant, timeZone, 'd MMM');
+}
+
+/** "1 h 20 min" for durations. */
+export function formatDuration(minutes: number): string {
+  if (minutes < 60) return `${Math.round(minutes)} min`;
+  const h = Math.floor(minutes / 60);
+  const m = Math.round(minutes % 60);
+  return m ? `${h} h ${m} min` : `${h} h`;
+}

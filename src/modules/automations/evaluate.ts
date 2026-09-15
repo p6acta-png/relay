@@ -61,6 +61,7 @@ export function evaluateConditions(conditions: Condition[], context: EventContex
 export function renderTemplate(template: string, context: EventContext): string {
   const values: Record<string, string> = {
     'customer.firstName': context.customer?.name?.split(' ')[0] ?? 'there',
+    'customer.name': context.customer?.name ?? 'a customer',
     'business.name': context.businessName,
     'service.name': context.service?.name ?? 'your service',
     'booking.when': context.booking

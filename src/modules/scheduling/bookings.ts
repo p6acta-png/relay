@@ -30,7 +30,14 @@ export type BookingInput = z.input<typeof bookingInputSchema>;
 
 const bookingInclude = {
   service: {
-    select: { id: true, name: true, durationMinutes: true, priceMinor: true, confirmationMode: true },
+    select: {
+      id: true,
+      name: true,
+      durationMinutes: true,
+      priceMinor: true,
+      priceIsFrom: true,
+      confirmationMode: true,
+    },
   },
   staffMember: { select: { id: true, displayName: true } },
   customer: { select: { id: true, name: true, email: true, phone: true } },
