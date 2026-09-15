@@ -6,7 +6,7 @@ import { env } from '@/lib/env';
 import { AppError, fieldErrorsFrom } from '@/lib/errors';
 import { generateToken, hashToken } from '@/lib/tokens';
 import { recordAudit } from '@/modules/audit/audit';
-import { emailSchema } from '@/modules/auth/accounts';
+import { emailSchema } from '@/modules/auth/schemas';
 import type { SessionUser } from '@/modules/auth/sessions';
 import { queueEmail } from '@/modules/notifications/email';
 import { actorOf, authorize, type MemberContext } from './context';

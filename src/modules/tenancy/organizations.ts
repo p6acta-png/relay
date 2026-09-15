@@ -4,8 +4,9 @@ import { enterTenant, postgresErrorCode, PG_UNIQUE_VIOLATION, prisma, transactio
 import { AppError, fieldErrorsFrom } from '@/lib/errors';
 import { timeToMinutes } from '@/lib/time';
 import { recordAudit } from '@/modules/audit/audit';
-import { emailSchema } from '@/modules/auth/accounts';
+import { emailSchema } from '@/modules/auth/schemas';
 import type { SessionUser } from '@/modules/auth/sessions';
+import { defaultAutomations } from '@/modules/automations/defaults';
 import type { OpeningHours } from '@/modules/catalog/opening-hours';
 
 const RESERVED_SLUGS = new Set([
@@ -138,6 +139,18 @@ export async function createOrganizationForOwner(user: SessionUser, input: Onboa
       });
       await scope.db.staffService.create({
         data: { organizationId: organization.id, staffMemberId: staff.id, serviceId: service.id },
+      });
+      await scope.db.automation.createMany({
+        data: defaultAutomations().map((definition) => ({
+          organizationId: organization.id,
+          name: definition.name,
+          description: definition.description || null,
+          trigger: definition.trigger,
+          conditions: definition.conditions,
+          actions: definition.actions,
+          enabled: definition.enabled,
+          createdByMembershipId: membership.id,
+        })),
       });
       await recordAudit(scope, {
         actor: { type: 'USER', id: user.id, label: user.name },

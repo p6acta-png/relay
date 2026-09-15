@@ -3,10 +3,14 @@ import { z } from 'zod';
 import type { BookingStatus } from '@/generated/prisma/enums';
 import { PG_EXCLUSION_VIOLATION, PG_UNIQUE_VIOLATION, postgresErrorCode, type TenantScope } from '@/lib/db';
 import { AppError, fieldErrorsFrom } from '@/lib/errors';
+import { env } from '@/lib/env';
+import { formatInZone } from '@/lib/time';
 import { generateReference, generateToken, hashToken } from '@/lib/tokens';
 import { recordAudit } from '@/modules/audit/audit';
-import { customerDetailsSchema, upsertCustomer } from '@/modules/customers/customers';
+import { upsertCustomer } from '@/modules/customers/customers';
+import { customerDetailsSchema } from '@/modules/customers/schemas';
 import { domainEvent, type DomainEvent, type WithEvents } from '@/modules/events';
+import { queueEmail } from '@/modules/notifications/email';
 import { actorOf, authorizeIn, type ActorContext } from '@/modules/tenancy/context';
 import { findExactSlot } from './availability';
 
@@ -58,7 +62,7 @@ export async function createBooking(
   const { db, organizationId } = scope;
   const organization = await db.organization.findUniqueOrThrow({
     where: { id: organizationId },
-    select: { name: true, timezone: true },
+    select: { name: true, timezone: true, slug: true, addressLine: true, cancellationWindowHours: true },
   });
 
   // 1. Business rules: re-check this exact time with the same rules the customer was shown.
@@ -122,6 +126,36 @@ export async function createBooking(
     entityId: booking.id,
     metadata: { status, origin: input.origin, serviceId: service.id, staffMemberId: booking.staffMemberId },
   });
+
+  // The private link can only be sent now: afterwards only its hash exists.
+  if (booking.customer.email) {
+    const manageUrl = `${env.APP_URL}/w/${organization.slug}/booking/${manageToken}`;
+    const when = formatInZone(booking.startsAt, organization.timezone, "EEEE d MMMM 'at' HH:mm");
+    await queueEmail(scope, {
+      to: booking.customer.email,
+      subject:
+        status === 'PENDING'
+          ? `We received your request: ${service.name}, ${when}`
+          : `Booking confirmed: ${service.name}, ${when}`,
+      text: [
+        `Hi ${booking.customer.name?.split(' ')[0] ?? 'there'},`,
+        '',
+        status === 'PENDING'
+          ? `Thanks for your request. ${organization.name} will confirm it shortly.`
+          : `You're booked in at ${organization.name}.`,
+        '',
+        `${service.name}`,
+        `${when}`,
+        organization.addressLine ? organization.addressLine : null,
+        `Reference: ${booking.reference}`,
+        '',
+        `Change or cancel (up to ${organization.cancellationWindowHours} hours before): ${manageUrl}`,
+      ]
+        .filter((line) => line !== null)
+        .join('\n'),
+      related: { type: 'Booking', id: booking.id },
+    });
+  }
 
   // 4. Tell the rest of the system — automations run after the transaction commits.
   const event = domainEvent({

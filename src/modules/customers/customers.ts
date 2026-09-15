@@ -1,25 +1,11 @@
 import 'server-only';
-import { z } from 'zod';
 import { Prisma } from '@/generated/prisma/client';
 import type { TenantScope } from '@/lib/db';
 import { AppError } from '@/lib/errors';
 import { recordAudit } from '@/modules/audit/audit';
-import { emailSchema } from '@/modules/auth/accounts';
+import type { CustomerDetails } from './schemas';
+export { customerDetailsSchema, phoneSchema, type CustomerDetails } from './schemas';
 import { actorOf, authorize, type ActorContext } from '@/modules/tenancy/context';
-
-export const phoneSchema = z
-  .string()
-  .trim()
-  .transform((v) => v.replace(/[\s().-]/g, ''))
-  .pipe(z.string().regex(/^\+?\d{8,15}$/, 'Enter a phone number with 8–15 digits, e.g. +47 912 34 567.'));
-
-export const customerDetailsSchema = z.object({
-  name: z.string().trim().min(2, 'Enter your name.').max(80),
-  email: emailSchema,
-  phone: z.union([z.literal(''), phoneSchema]).optional(),
-});
-
-export type CustomerDetails = z.infer<typeof customerDetailsSchema>;
 
 /**
  * Finds a customer by email within the organization, or creates one.

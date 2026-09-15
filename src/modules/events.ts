@@ -30,7 +30,13 @@ export type DomainEvent =
   | (EventBase & { type: 'lead.created'; leadId: string; serviceId?: string | null })
   | (EventBase & { type: 'conversation.handed_off'; conversationId: string; reason: HandoffReason });
 
-export type HandoffReason = 'unanswered_question' | 'customer_asked' | 'flagged' | 'staff_took_over';
+export type HandoffReason =
+  | 'unanswered_question'
+  | 'customer_asked'
+  | 'no_availability'
+  | 'flagged'
+  | 'staff_took_over'
+  | 'automation_rule';
 
 export type DomainEventType = DomainEvent['type'];
 
