@@ -45,24 +45,33 @@ export interface TenantScope {
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+const TRANSACTION_OPTIONS = { maxWait: 5_000, timeout: 20_000 } as const;
+
 // #region learn:with-tenant
 export async function withTenant<T>(
   organizationId: string,
   work: (scope: TenantScope) => Promise<T>,
 ): Promise<T> {
-  if (!UUID.test(organizationId)) throw new Error('withTenant: organizationId must be a UUID');
+  return prisma.$transaction(async (tx) => work(await enterTenant(tx, organizationId)), TRANSACTION_OPTIONS);
+}
 
-  return prisma.$transaction(
-    async (tx) => {
-      // `true` = local to this transaction, so a pooled connection never leaks the setting
-      // into the next request that happens to reuse it.
-      await tx.$executeRaw`SELECT set_config('app.org_id', ${organizationId}, true)`;
-      return work({ organizationId, db: tx as TenantDb });
-    },
-    { maxWait: 5_000, timeout: 20_000 },
-  );
+/** Scopes an already-open transaction to one organization. */
+export async function enterTenant(
+  tx: Prisma.TransactionClient,
+  organizationId: string,
+): Promise<TenantScope> {
+  if (!UUID.test(organizationId)) throw new Error('enterTenant: organizationId must be a UUID');
+  // `true` = local to this transaction, so a pooled connection never carries the setting
+  // into the next request that happens to reuse it.
+  await tx.$executeRaw`SELECT set_config('app.org_id', ${organizationId}, true)`;
+  return { organizationId, db: tx as TenantDb };
 }
 // #endregion learn:with-tenant
+
+/** A plain transaction for identity/tenancy tables (e.g. creating an organization and its owner). */
+export function transaction<T>(work: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T> {
+  return prisma.$transaction(work, TRANSACTION_OPTIONS);
+}
 
 /** PostgreSQL error code for exclusion-constraint violations (used for double-booking). */
 export const PG_EXCLUSION_VIOLATION = '23P01';

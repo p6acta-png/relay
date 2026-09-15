@@ -31,3 +31,6 @@ Thumbs.db
 *.log
 .vscode/*
 !.vscode/extensions.json
+
+# local assistant tooling
+.claude/

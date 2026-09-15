@@ -1,0 +1,117 @@
+@import 'tailwindcss';
+
+/*
+ * Relay design tokens — "Nordic editorial".
+ * Warm paper, deep ink, one working colour (pine) and one attention colour (signal orange).
+ * Status colours are muted and always paired with text, never colour alone.
+ */
+@theme {
+  --color-paper: #f4f1ea;
+  --color-surface: #fbfaf6;
+  --color-sunken: #ebe6da;
+  --color-ink: #1b1d1a;
+  --color-ink-2: #464a43;
+  --color-ink-3: #666a61;
+  --color-rule: #dbd4c4;
+  --color-rule-strong: #b9b09c;
+
+  --color-pine-50: #e9f0eb;
+  --color-pine-100: #d2e2d8;
+  --color-pine-500: #3b7a64;
+  --color-pine-600: #2a5f4e;
+  --color-pine-700: #1f4b3f;
+  --color-pine-800: #173a31;
+
+  --color-signal-50: #fbe9dd;
+  --color-signal-100: #f6d3bd;
+  --color-signal-500: #e0561b;
+  --color-signal-700: #a13d0d;
+
+  --color-pending-50: #f9efd3;
+  --color-pending-700: #7d5300;
+  --color-danger-50: #fae3df;
+  --color-danger-600: #b42318;
+  --color-danger-700: #8f1c13;
+  --color-info-50: #e3eaf4;
+  --color-info-700: #1f4f8a;
+
+  --font-sans: var(--font-grotesk), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-newsreader), ui-serif, Georgia, serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, 'Cascadia Mono', monospace;
+
+  --radius-sm: 3px;
+  --radius-md: 5px;
+  --radius-lg: 8px;
+
+  --shadow-pop: 0 1px 2px rgb(27 29 26 / 0.06), 0 8px 24px rgb(27 29 26 / 0.1);
+}
+
+@layer base {
+  html {
+    color-scheme: light;
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    background: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-feature-settings: 'ss01', 'cv11';
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  ::selection {
+    background: var(--color-pine-100);
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-pine-600);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+    letter-spacing: -0.015em;
+  }
+  p {
+    text-wrap: pretty;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer components {
+  /* Small uppercase label used above headings and in tables: "02 — Bookings". */
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-ink-3);
+  }
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+  /* Accessible visually-hidden text for screen readers. */
+  .sr-only-focusable:not(:focus):not(:focus-within) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .rule-t {
+    border-top: 1px solid var(--color-rule);
+  }
+  .rule-b {
+    border-bottom: 1px solid var(--color-rule);
+  }
+}

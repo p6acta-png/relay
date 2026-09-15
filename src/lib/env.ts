@@ -13,7 +13,6 @@ const envSchema = z.object({
   DATABASE_URL: z.url({ protocol: /^postgres(ql)?$/ }),
   APP_URL: z.url(),
   APP_SECRET: z.string().min(32, 'APP_SECRET must be at least 32 characters'),
-  TRUST_PROXY_HEADERS: flag.default(false),
   DEMO_MODE: flag.default(false),
   // Only the providers that actually exist in this build are accepted.
   AI_PROVIDER: z.enum(['mock']).default('mock'),
