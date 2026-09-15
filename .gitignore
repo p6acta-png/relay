@@ -1,0 +1,33 @@
+# dependencies
+node_modules/
+
+# next.js
+.next/
+out/
+next-env.d.ts
+*.tsbuildinfo
+
+# local database cluster, logs and runtime state
+.relay/
+
+# generated prisma client
+src/generated/
+
+# env files (never commit secrets) — .env.example is the template
+.env
+.env.*
+!.env.example
+
+# testing
+coverage/
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+
+# os / editor
+.DS_Store
+Thumbs.db
+*.log
+.vscode/*
+!.vscode/extensions.json

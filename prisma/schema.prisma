@@ -1,0 +1,652 @@
+// Relay data model.
+//
+// Conventions
+// - Every business-owned table has `organizationId`. Row-level security policies
+//   (prisma/migrations/*_tenant_isolation) filter on it, and relations between
+//   business-owned tables use composite foreign keys (organizationId, id), so a row
+//   can never point at another organization's row.
+// - Times are stored as timestamptz (UTC). The business timezone lives on Organization.
+// - Money is stored in minor units (øre) as integers.
+// - JSON columns (openingHours, Conversation.state, Automation.conditions/actions, …)
+//   are always validated with Zod in the owning module before they are written or used.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Identity & tenancy ─────────────────────────────────────────────────────
+
+enum Role {
+  OWNER
+  ADMIN
+  STAFF
+}
+
+model User {
+  id           String   @id @default(uuid(7)) @db.Uuid
+  /// Always stored lower-cased.
+  email        String   @unique
+  name         String
+  passwordHash String
+  createdAt    DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @db.Timestamptz(3)
+
+  sessions    Session[]
+  memberships Membership[]
+}
+
+model Session {
+  /// SHA-256 of the session token. The raw token only ever exists in the user's cookie.
+  id                   String   @id
+  userId               String   @db.Uuid
+  activeOrganizationId String?  @db.Uuid
+  expiresAt            DateTime @db.Timestamptz(3)
+  createdAt            DateTime @default(now()) @db.Timestamptz(3)
+
+  user               User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activeOrganization Organization? @relation(fields: [activeOrganizationId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model Organization {
+  id           String  @id @default(uuid(7)) @db.Uuid
+  slug         String  @unique
+  name         String
+  tagline      String?
+  description  String?
+  timezone     String  @default("Europe/Oslo")
+  currency     String  @default("NOK")
+  contactEmail String?
+  contactPhone String?
+  addressLine  String?
+  city         String?
+  /// Weekly opening hours, validated by `openingHoursSchema` (catalog module).
+  openingHours Json    @default("[]")
+
+  // Booking policy — the business rules Relay enforces.
+  minNoticeMinutes        Int @default(120)
+  bookingHorizonDays      Int @default(30)
+  cancellationWindowHours Int @default(24)
+  slotIntervalMinutes     Int @default(30)
+  /// Shown to customers when a conversation is handed to a person.
+  handoffReplyHours       Int @default(4)
+
+  isDemo    Boolean  @default(false)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  sessions       Session[]
+  memberships    Membership[]
+  invites        Invite[]
+  staffMembers   StaffMember[]
+  staffServices  StaffService[]
+  workingHours   WorkingHours[]
+  timeOff        TimeOff[]
+  services       Service[]
+  customers      Customer[]
+  conversations  Conversation[]
+  messages       Message[]
+  bookings       Booking[]
+  leads          Lead[]
+  tasks          Task[]
+  knowledgeItems KnowledgeItem[]
+  automations    Automation[]
+  automationRuns AutomationRun[]
+  notifications  Notification[]
+  outboundEmails OutboundEmail[]
+  auditLogs      AuditLog[]
+}
+
+model Membership {
+  id             String   @id @default(uuid(7)) @db.Uuid
+  organizationId String   @db.Uuid
+  userId         String   @db.Uuid
+  role           Role
+  createdAt      DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @db.Timestamptz(3)
+
+  organization     Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  staffMember      StaffMember?
+  invitesSent      Invite[]
+  assignedConvos   Conversation[]
+  staffMessages    Message[]
+  createdBookings  Booking[]
+  assignedLeads    Lead[]
+  assignedTasks    Task[]
+  notifications    Notification[]
+  automationsBuilt Automation[]
+
+  @@unique([organizationId, userId])
+  @@unique([organizationId, id])
+  @@index([userId])
+}
+
+model Invite {
+  id             String    @id @default(uuid(7)) @db.Uuid
+  organizationId String    @db.Uuid
+  email          String
+  role           Role
+  /// SHA-256 of the invite token.
+  tokenHash      String    @unique
+  invitedById    String    @db.Uuid
+  expiresAt      DateTime  @db.Timestamptz(3)
+  acceptedAt     DateTime? @db.Timestamptz(3)
+  revokedAt      DateTime? @db.Timestamptz(3)
+  createdAt      DateTime  @default(now()) @db.Timestamptz(3)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  invitedBy    Membership   @relation(fields: [organizationId, invitedById], references: [organizationId, id], onDelete: NoAction)
+
+  @@index([organizationId])
+}
+
+// ─── Scheduling ─────────────────────────────────────────────────────────────
+
+/// A bookable person. May or may not have a login (membershipId).
+model StaffMember {
+  id             String   @id @default(uuid(7)) @db.Uuid
+  organizationId String   @db.Uuid
+  displayName    String
+  title          String?
+  membershipId   String?  @db.Uuid
+  active         Boolean  @default(true)
+  sortOrder      Int      @default(0)
+  createdAt      DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @db.Timestamptz(3)
+
+  organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  membership   Membership?    @relation(fields: [organizationId, membershipId], references: [organizationId, id], onDelete: NoAction)
+  services     StaffService[]
+  workingHours WorkingHours[]
+  timeOff      TimeOff[]
+  bookings     Booking[]
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, membershipId])
+}
+
+model StaffService {
+  organizationId String @db.Uuid
+  staffMemberId  String @db.Uuid
+  serviceId      String @db.Uuid
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  staffMember  StaffMember  @relation(fields: [organizationId, staffMemberId], references: [organizationId, id], onDelete: Cascade)
+  service      Service      @relation(fields: [organizationId, serviceId], references: [organizationId, id], onDelete: Cascade)
+
+  @@id([staffMemberId, serviceId])
+  @@index([organizationId, serviceId])
+}
+
+/// Weekly recurring working hours in the organization's local time.
+model WorkingHours {
+  id             String @id @default(uuid(7)) @db.Uuid
+  organizationId String @db.Uuid
+  staffMemberId  String @db.Uuid
+  /// ISO weekday: 1 = Monday … 7 = Sunday.
+  weekday        Int
+  /// Minutes after local midnight.
+  startMinute    Int
+  endMinute      Int
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  staffMember  StaffMember  @relation(fields: [organizationId, staffMemberId], references: [organizationId, id], onDelete: Cascade)
+
+  @@index([organizationId, staffMemberId])
+}
+
+/// Holidays, sick days and closures. staffMemberId = null means the whole business is closed.
+model TimeOff {
+  id             String   @id @default(uuid(7)) @db.Uuid
+  organizationId String   @db.Uuid
+  staffMemberId  String?  @db.Uuid
+  startsAt       DateTime @db.Timestamptz(3)
+  endsAt         DateTime @db.Timestamptz(3)
+  reason         String?
+  createdAt      DateTime @default(now()) @db.Timestamptz(3)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  staffMember  StaffMember? @relation(fields: [organizationId, staffMemberId], references: [organizationId, id], onDelete: Cascade)
+
+  @@index([organizationId, startsAt])
+}
+
+enum ServiceKind {
+  /// Has a fixed duration and can be booked into a slot.
+  BOOKABLE
+  /// Needs an assessment first; requests become leads.
+  QUOTE
+}
+
+enum ConfirmationMode {
+  INSTANT
+  APPROVAL
+}
+
+model Service {
+  id               String           @id @default(uuid(7)) @db.Uuid
+  organizationId   String           @db.Uuid
+  name             String
+  description      String           @default("")
+  kind             ServiceKind      @default(BOOKABLE)
+  durationMinutes  Int?
+  /// Price in minor units (øre). Null = price on request.
+  priceMinor       Int?
+  priceIsFrom      Boolean          @default(false)
+  confirmationMode ConfirmationMode @default(INSTANT)
+  /// Extra words customers use for this service ("flat tyre", "puncture").
+  keywords         String[]         @default([])
+  active           Boolean          @default(true)
+  sortOrder        Int              @default(0)
+  createdAt        DateTime         @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime         @updatedAt @db.Timestamptz(3)
+
+  organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  staff        StaffService[]
+  bookings     Booking[]
+  leads        Lead[]
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, name])
+}
+
+// ─── Customers & conversations ──────────────────────────────────────────────
+
+model Customer {
+  id             String    @id @default(uuid(7)) @db.Uuid
+  organizationId String    @db.Uuid
+  name           String?
+  /// Lower-cased. Unique per organization when present.
+  email          String?
+  phone          String?
+  /// Set when personal data was erased on request; the row is kept for statistics.
+  anonymisedAt   DateTime? @db.Timestamptz(3)
+  createdAt      DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime  @updatedAt @db.Timestamptz(3)
+
+  organization  Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  conversations Conversation[]
+  bookings      Booking[]
+  leads         Lead[]
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, email])
+}
+
+enum Channel {
+  WEB_CHAT
+  EMAIL
+}
+
+enum ConversationStatus {
+  OPEN
+  NEEDS_HUMAN
+  RESOLVED
+}
+
+model Conversation {
+  id                String             @id @default(uuid(7)) @db.Uuid
+  organizationId    String             @db.Uuid
+  customerId        String?            @db.Uuid
+  channel           Channel
+  status            ConversationStatus @default(OPEN)
+  /// False once a person has taken over; Relay stops replying automatically.
+  assistantActive   Boolean            @default(true)
+  assigneeId        String?            @db.Uuid
+  /// SHA-256 of the token the customer's browser uses to continue this conversation.
+  accessTokenHash   String             @unique
+  /// Where the assistant is in its flow. Validated by `assistantStateSchema`.
+  state             Json               @default("{\"step\":\"idle\"}")
+  subject           String?
+  /// Set by abuse heuristics; flagged conversations cannot trigger bookings.
+  flaggedReason     String?
+  hadBookingIntent  Boolean            @default(false)
+  handedOffAt       DateTime?          @db.Timestamptz(3)
+  firstStaffReplyAt DateTime?          @db.Timestamptz(3)
+  resolvedAt        DateTime?          @db.Timestamptz(3)
+  lastMessageAt     DateTime           @default(now()) @db.Timestamptz(3)
+  createdAt         DateTime           @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime           @updatedAt @db.Timestamptz(3)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  customer     Customer?    @relation(fields: [organizationId, customerId], references: [organizationId, id], onDelete: NoAction)
+  assignee     Membership?  @relation(fields: [organizationId, assigneeId], references: [organizationId, id], onDelete: NoAction)
+  messages     Message[]
+  bookings     Booking[]
+  leads        Lead[]
+  tasks        Task[]
+
+  @@unique([organizationId, id])
+  @@index([organizationId, status, lastMessageAt])
+  @@index([organizationId, createdAt])
+}
+
+enum MessageAuthor {
+  CUSTOMER
+  ASSISTANT
+  STAFF
+  SYSTEM
+}
+
+model Message {
+  id                String        @id @default(uuid(7)) @db.Uuid
+  organizationId    String        @db.Uuid
+  conversationId    String        @db.Uuid
+  author            MessageAuthor
+  body              String
+  /// Structured UI shown with an assistant message (slot buttons, forms). Validated.
+  blocks            Json?
+  /// What Relay understood from a customer message (validated AI output), for staff review.
+  understanding     Json?
+  staffMembershipId String?       @db.Uuid
+  createdAt         DateTime      @default(now()) @db.Timestamptz(3)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  conversation Conversation @relation(fields: [organizationId, conversationId], references: [organizationId, id], onDelete: Cascade)
+  staffAuthor  Membership?  @relation(fields: [organizationId, staffMembershipId], references: [organizationId, id], onDelete: NoAction)
+
+  @@index([organizationId, conversationId, createdAt])
+}
+
+// ─── Bookings, leads, tasks ─────────────────────────────────────────────────
+
+enum BookingStatus {
+  /// Waiting for staff approval. Still holds the slot.
+  PENDING
+  CONFIRMED
+  DECLINED
+  CANCELLED
+}
+
+enum Origin {
+  CHAT
+  EMAIL
+  DASHBOARD
+}
+
+model Booking {
+  id                    String        @id @default(uuid(7)) @db.Uuid
+  organizationId        String        @db.Uuid
+  /// Short code customers can quote, e.g. "EK-7KQ3".
+  reference             String
+  serviceId             String        @db.Uuid
+  staffMemberId         String        @db.Uuid
+  customerId            String        @db.Uuid
+  conversationId        String?       @db.Uuid
+  createdByMembershipId String?       @db.Uuid
+  startsAt              DateTime      @db.Timestamptz(3)
+  endsAt                DateTime      @db.Timestamptz(3)
+  status                BookingStatus
+  origin                Origin
+  notes                 String?
+  /// SHA-256 of the customer's private manage-booking link token.
+  manageTokenHash       String?       @unique
+  decidedAt             DateTime?     @db.Timestamptz(3)
+  cancelledAt           DateTime?     @db.Timestamptz(3)
+  cancellationReason    String?
+  createdAt             DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt             DateTime      @updatedAt @db.Timestamptz(3)
+
+  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  service      Service       @relation(fields: [organizationId, serviceId], references: [organizationId, id], onDelete: NoAction)
+  staffMember  StaffMember   @relation(fields: [organizationId, staffMemberId], references: [organizationId, id], onDelete: NoAction)
+  customer     Customer      @relation(fields: [organizationId, customerId], references: [organizationId, id], onDelete: NoAction)
+  conversation Conversation? @relation(fields: [organizationId, conversationId], references: [organizationId, id], onDelete: NoAction)
+  createdBy    Membership?   @relation(fields: [organizationId, createdByMembershipId], references: [organizationId, id], onDelete: NoAction)
+  tasks        Task[]
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, reference])
+  @@index([organizationId, startsAt])
+  @@index([organizationId, status])
+  @@index([organizationId, customerId])
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  WON
+  LOST
+}
+
+model Lead {
+  id             String     @id @default(uuid(7)) @db.Uuid
+  organizationId String     @db.Uuid
+  customerId     String     @db.Uuid
+  conversationId String?    @db.Uuid
+  serviceId      String?    @db.Uuid
+  assigneeId     String?    @db.Uuid
+  summary        String
+  status         LeadStatus @default(NEW)
+  origin         Origin
+  closedAt       DateTime?  @db.Timestamptz(3)
+  createdAt      DateTime   @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime   @updatedAt @db.Timestamptz(3)
+
+  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  customer     Customer      @relation(fields: [organizationId, customerId], references: [organizationId, id], onDelete: NoAction)
+  conversation Conversation? @relation(fields: [organizationId, conversationId], references: [organizationId, id], onDelete: NoAction)
+  service      Service?      @relation(fields: [organizationId, serviceId], references: [organizationId, id], onDelete: NoAction)
+  assignee     Membership?   @relation(fields: [organizationId, assigneeId], references: [organizationId, id], onDelete: NoAction)
+  tasks        Task[]
+
+  @@unique([organizationId, id])
+  @@index([organizationId, status, createdAt])
+}
+
+enum TaskKind {
+  HANDOFF
+  APPROVAL
+  FOLLOW_UP
+  OTHER
+}
+
+enum TaskStatus {
+  OPEN
+  DONE
+}
+
+model Task {
+  id             String     @id @default(uuid(7)) @db.Uuid
+  organizationId String     @db.Uuid
+  title          String
+  details        String?
+  kind           TaskKind   @default(OTHER)
+  status         TaskStatus @default(OPEN)
+  assigneeId     String?    @db.Uuid
+  dueAt          DateTime?  @db.Timestamptz(3)
+  conversationId String?    @db.Uuid
+  bookingId      String?    @db.Uuid
+  leadId         String?    @db.Uuid
+  completedAt    DateTime?  @db.Timestamptz(3)
+  createdAt      DateTime   @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime   @updatedAt @db.Timestamptz(3)
+
+  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  assignee     Membership?   @relation(fields: [organizationId, assigneeId], references: [organizationId, id], onDelete: NoAction)
+  conversation Conversation? @relation(fields: [organizationId, conversationId], references: [organizationId, id], onDelete: NoAction)
+  booking      Booking?      @relation(fields: [organizationId, bookingId], references: [organizationId, id], onDelete: NoAction)
+  lead         Lead?         @relation(fields: [organizationId, leadId], references: [organizationId, id], onDelete: NoAction)
+
+  @@index([organizationId, status, dueAt])
+}
+
+// ─── Knowledge, automations, notifications, audit ───────────────────────────
+
+model KnowledgeItem {
+  id             String   @id @default(uuid(7)) @db.Uuid
+  organizationId String   @db.Uuid
+  /// The question as a customer might ask it.
+  question       String
+  answer         String
+  keywords       String[] @default([])
+  published      Boolean  @default(true)
+  sortOrder      Int      @default(0)
+  createdAt      DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @db.Timestamptz(3)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, published])
+}
+
+enum AutomationTrigger {
+  CONVERSATION_STARTED
+  BOOKING_REQUESTED
+  BOOKING_CONFIRMED
+  BOOKING_CANCELLED
+  LEAD_CREATED
+  CONVERSATION_HANDED_OFF
+}
+
+model Automation {
+  id                    String            @id @default(uuid(7)) @db.Uuid
+  organizationId        String            @db.Uuid
+  name                  String
+  description           String?
+  trigger               AutomationTrigger
+  /// Validated by `automationConditionsSchema`.
+  conditions            Json              @default("[]")
+  /// Validated by `automationActionsSchema`.
+  actions               Json              @default("[]")
+  enabled               Boolean           @default(true)
+  createdByMembershipId String?           @db.Uuid
+  createdAt             DateTime          @default(now()) @db.Timestamptz(3)
+  updatedAt             DateTime          @updatedAt @db.Timestamptz(3)
+
+  organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdBy    Membership?     @relation(fields: [organizationId, createdByMembershipId], references: [organizationId, id], onDelete: NoAction)
+  runs         AutomationRun[]
+
+  @@unique([organizationId, id])
+  @@index([organizationId, trigger, enabled])
+}
+
+enum AutomationRunStatus {
+  RUNNING
+  SUCCEEDED
+  FAILED
+}
+
+model AutomationRun {
+  id             String              @id @default(uuid(7)) @db.Uuid
+  organizationId String              @db.Uuid
+  automationId   String              @db.Uuid
+  /// The domain event that caused this run. (automationId, eventId) is unique → a run never repeats.
+  eventId        String              @db.Uuid
+  trigger        AutomationTrigger
+  status         AutomationRunStatus
+  /// Per-action results, validated by `runStepsSchema`.
+  steps          Json                @default("[]")
+  error          String?
+  conversationId String?             @db.Uuid
+  bookingId      String?             @db.Uuid
+  leadId         String?             @db.Uuid
+  startedAt      DateTime            @default(now()) @db.Timestamptz(3)
+  finishedAt     DateTime?           @db.Timestamptz(3)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  automation   Automation   @relation(fields: [organizationId, automationId], references: [organizationId, id], onDelete: Cascade)
+
+  @@unique([automationId, eventId])
+  @@index([organizationId, startedAt])
+}
+
+model Notification {
+  id             String    @id @default(uuid(7)) @db.Uuid
+  organizationId String    @db.Uuid
+  membershipId   String    @db.Uuid
+  title          String
+  body           String    @default("")
+  href           String?
+  readAt         DateTime? @db.Timestamptz(3)
+  createdAt      DateTime  @default(now()) @db.Timestamptz(3)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  recipient    Membership   @relation(fields: [organizationId, membershipId], references: [organizationId, id], onDelete: Cascade)
+
+  @@index([organizationId, membershipId, readAt])
+}
+
+enum EmailStatus {
+  /// Demo provider: stored in the in-app outbox, not sent.
+  STORED_IN_OUTBOX
+  SENT
+  FAILED
+}
+
+model OutboundEmail {
+  id             String      @id @default(uuid(7)) @db.Uuid
+  organizationId String      @db.Uuid
+  toAddress      String
+  subject        String
+  textBody       String
+  provider       String
+  status         EmailStatus
+  relatedType    String?
+  relatedId      String?     @db.Uuid
+  createdAt      DateTime    @default(now()) @db.Timestamptz(3)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, createdAt])
+}
+
+enum ActorType {
+  USER
+  CUSTOMER
+  ASSISTANT
+  AUTOMATION
+  SYSTEM
+}
+
+enum AuditResult {
+  SUCCESS
+  FAILURE
+  DENIED
+}
+
+/// Append-only. The app database role may INSERT and SELECT but never UPDATE or DELETE.
+/// Deliberately no foreign keys to business rows, so history survives deletes and anonymisation.
+model AuditLog {
+  id             String      @id @default(uuid(7)) @db.Uuid
+  organizationId String      @db.Uuid
+  actorType      ActorType
+  actorId        String?
+  /// Snapshot of who acted ("Ingrid Solberg", "Relay assistant") at the time.
+  actorLabel     String
+  /// Dotted verb, e.g. "booking.created".
+  action         String
+  entityType     String
+  entityId       String?
+  result         AuditResult
+  /// IDs and state changes only — never message text, emails or phone numbers.
+  metadata       Json        @default("{}")
+  createdAt      DateTime    @default(now()) @db.Timestamptz(3)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, createdAt])
+  @@index([organizationId, entityType, entityId])
+}
+
+// ─── Protection ─────────────────────────────────────────────────────────────
+
+/// Fixed-window rate limit counters. Keys contain hashed identifiers, never raw IPs.
+model RateLimitBucket {
+  key         String
+  windowStart DateTime @db.Timestamptz(3)
+  count       Int
+  expiresAt   DateTime @db.Timestamptz(3)
+
+  @@id([key, windowStart])
+  @@index([expiresAt])
+}
