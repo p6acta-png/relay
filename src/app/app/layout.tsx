@@ -20,19 +20,16 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   const { counts, notifications } = await withTenant(ctx.organizationId, async (scope) => {
     const { db, organizationId } = scope;
-    const [needsHuman, pendingBookings, openTasks, newLeads, notifications] = await Promise.all([
-      db.conversation.count({ where: { organizationId, status: 'NEEDS_HUMAN' } }),
-      db.booking.count({ where: { organizationId, status: 'PENDING', startsAt: { gte: new Date() } } }),
-      db.task.count({
-        where: {
-          organizationId,
-          status: 'OPEN',
-          OR: [{ assigneeId: ctx.membershipId }, { assigneeId: null }],
-        },
-      }),
-      db.lead.count({ where: { organizationId, status: 'NEW' } }),
-      listNotifications(scope, ctx.membershipId),
-    ]);
+    // One transaction = one connection, so these small counts run one after another.
+    const needsHuman = await db.conversation.count({ where: { organizationId, status: 'NEEDS_HUMAN' } });
+    const pendingBookings = await db.booking.count({
+      where: { organizationId, status: 'PENDING', startsAt: { gte: new Date() } },
+    });
+    const openTasks = await db.task.count({
+      where: { organizationId, status: 'OPEN', OR: [{ assigneeId: ctx.membershipId }, { assigneeId: null }] },
+    });
+    const newLeads = await db.lead.count({ where: { organizationId, status: 'NEW' } });
+    const notifications = await listNotifications(scope, ctx.membershipId);
     return {
       counts: { needsHuman, pendingBookings, openTasks, newLeads } satisfies Record<NavCountKey, number>,
       notifications,

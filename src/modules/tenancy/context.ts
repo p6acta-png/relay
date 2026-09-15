@@ -68,6 +68,19 @@ export function authorize(ctx: ActorContext, permission: Permission): void {
     throw new AppError('FORBIDDEN', 'You do not have permission to do that.');
   }
 }
+
+/** Like `authorize`, and also proves the actor belongs to the organization the transaction is scoped to. */
+export function authorizeIn(
+  scope: { organizationId: string },
+  ctx: ActorContext,
+  permission: Permission,
+): void {
+  if (scope.organizationId !== ctx.organizationId) {
+    // A programming error, never a user error: fail loudly.
+    throw new Error('Actor context and tenant scope refer to different organizations.');
+  }
+  authorize(ctx, permission);
+}
 // #endregion learn:authorize
 
 export function actorOf(ctx: ActorContext): Actor {

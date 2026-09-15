@@ -48,14 +48,12 @@ export async function listNotifications(
   membershipId: string,
   limit = 15,
 ) {
-  const [items, unread] = await Promise.all([
-    db.notification.findMany({
-      where: { organizationId, membershipId },
-      orderBy: { createdAt: 'desc' },
-      take: limit,
-    }),
-    db.notification.count({ where: { organizationId, membershipId, readAt: null } }),
-  ]);
+  const items = await db.notification.findMany({
+    where: { organizationId, membershipId },
+    orderBy: { createdAt: 'desc' },
+    take: limit,
+  });
+  const unread = await db.notification.count({ where: { organizationId, membershipId, readAt: null } });
   return { items, unread };
 }
 
