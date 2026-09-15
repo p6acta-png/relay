@@ -33,7 +33,7 @@ const customer = (n: number) => ({
 
 async function setupWorkshop() {
   const business = await createBusiness({ businessName: 'Test Bikes' });
-  const { organization, ctx } = business;
+  const { organization } = business;
   const extra = await withTenant(organization.id, async ({ db, organizationId }) => {
     const service = await db.service.findFirstOrThrow({ where: { organizationId } });
     const owner = await db.staffMember.findFirstOrThrow({ where: { organizationId } });
