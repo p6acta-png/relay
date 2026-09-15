@@ -848,9 +848,16 @@ async function seedWorkshop(users: Map<string, { id: string; name: string }>) {
             ]);
             const customer = pick(customers);
             const viaChat = chance(0.58);
+            // Booked 4 h – 4 days before the appointment, and never "in the future": upcoming
+            // bookings get a creation time spread over the last ten days.
             const createdAt = new Date(
-              Math.min(now.getTime() - 5 * MIN, startsAt.getTime() - between(4, 96) * HOUR),
+              Math.min(
+                startsAt.getTime() - between(4, 96) * HOUR,
+                now.getTime() - between(10, 60 * 24 * 10) * MIN,
+              ),
             );
+            const pastOnly = (instant: number) =>
+              new Date(Math.max(createdAt.getTime() + MIN, Math.min(instant, now.getTime() - 2 * MIN)));
             const approval = service.seed.confirmationMode === 'APPROVAL';
 
             let status: 'CONFIRMED' | 'PENDING' | 'CANCELLED' | 'DECLINED' = 'CONFIRMED';
@@ -872,9 +879,9 @@ async function seedWorkshop(users: Map<string, { id: string; name: string }>) {
                 status,
                 origin: viaChat ? 'CHAT' : 'DASHBOARD',
                 manageTokenHash: hashToken(token),
-                decidedAt: approval && status !== 'PENDING' ? new Date(createdAt.getTime() + 3 * HOUR) : null,
+                decidedAt: approval && status !== 'PENDING' ? pastOnly(createdAt.getTime() + 3 * HOUR) : null,
                 cancelledAt:
-                  status === 'CANCELLED' ? new Date(createdAt.getTime() + between(1, 40) * HOUR) : null,
+                  status === 'CANCELLED' ? pastOnly(createdAt.getTime() + between(1, 40) * HOUR) : null,
                 createdAt,
               },
             });
@@ -1070,6 +1077,51 @@ async function seedWorkshop(users: Map<string, { id: string; name: string }>) {
           relatedId: mail.bookingId,
           createdAt: mail.at,
         },
+      });
+    }
+
+    // ── Customers who asked for a time and left without booking (keeps conversion honest).
+    for (let i = 0; i < 38; i++) {
+      const service = pick(bookable);
+      const opener = pick(service.seed.openers!);
+      const startedAt = new Date(now.getTime() - between(1, 44 * 24) * HOUR);
+      const offeredDay = formatInZone(new Date(startedAt.getTime() + 26 * HOUR), TZ, 'EEEE d MMMM');
+      await conversationWithMessages(scope, {
+        startedAt,
+        customerId: null,
+        status: chance(0.6) ? 'RESOLVED' : 'OPEN',
+        assistantActive: true,
+        hadBookingIntent: true,
+        messages: [
+          {
+            author: 'ASSISTANT',
+            body: 'Hi! I’m the automated assistant for Eik & Kant. I can book you in, answer questions about prices and opening hours, or pass you to someone at the workshop.',
+            gapMinutes: 0,
+          },
+          { author: 'CUSTOMER', body: opener, understanding: understand(opener, startedAt) },
+          {
+            author: 'ASSISTANT',
+            body: `Here are the next free times for ${service.seed.name}:`,
+            blocks: [
+              {
+                type: 'slot_options',
+                days: [
+                  {
+                    label: offeredDay,
+                    slots: [
+                      { id: 's1', time: '10:00' },
+                      { id: 's2', time: '14:30' },
+                    ],
+                  },
+                ],
+                canShowMore: true,
+              },
+            ],
+          },
+          ...(chance(0.35)
+            ? [{ author: 'CUSTOMER' as const, body: 'Show me more times', gapMinutes: 1 }]
+            : []),
+        ],
       });
     }
 

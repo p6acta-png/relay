@@ -35,6 +35,10 @@
   --color-info-50: #e3eaf4;
   --color-info-700: #1f4f8a;
 
+  /* Chart marks: validated with the dataviz palette checks (CVD ΔE 8.5, chroma, contrast vs surface). */
+  --color-chart-1: #2b8a63;
+  --color-chart-2: #e0561b;
+
   --font-sans: var(--font-grotesk), ui-sans-serif, system-ui, sans-serif;
   --font-serif: var(--font-newsreader), ui-serif, Georgia, serif;
   --font-mono: var(--font-plex-mono), ui-monospace, 'Cascadia Mono', monospace;
