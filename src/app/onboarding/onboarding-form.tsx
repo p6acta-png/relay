@@ -15,7 +15,7 @@ function slugify(value: string) {
     .replace(/å/g, 'a')
     .replace(/&/g, 'og')
     .normalize('NFKD')
-    .replace(/[̀-ͯ]/g, '')
+    .replace(/[̀-ͯ]/g, '') // strip accents left over after NFKD
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
     .slice(0, 40);
