@@ -1,7 +1,9 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { DEMO_PASSWORD } from '@/content/demo';
 import { getSubsystem } from '@/content/learn/subsystems';
+import { env } from '@/lib/env';
 import { getWalkthrough, WALKTHROUGHS } from '@/content/learn/walkthroughs';
 import { CodeExcerpt } from '../../_components/code-excerpt';
 import { ByMode, ModeDetails } from '../../_components/mode';
@@ -46,7 +48,9 @@ export default async function WalkthroughPage({ params }: Props) {
             </li>
           ))}
         </ol>
-        <p className="mt-3 text-xs text-ink-3">Demo password for every account: relay-demo-2026</p>
+        {env.DEMO_MODE && (
+          <p className="mt-3 text-xs text-ink-3">Demo password for every account: {DEMO_PASSWORD}</p>
+        )}
       </section>
 
       <p className="mt-8 text-sm text-ink-3">
