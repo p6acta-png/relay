@@ -70,7 +70,8 @@ export function DailyColumns({
       <svg
         viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
         className="w-full"
-        role="img"
+        // A group, not an image: it contains focusable bars, and an image cannot have interactive children.
+        role="group"
         aria-label={`${name} per day, column chart. Values are in the table below.`}
       >
         {ticks(max).map((t) => (
@@ -97,7 +98,7 @@ export function DailyColumns({
             <g
               key={p.date}
               tabIndex={0}
-              role="button"
+              role="img"
               aria-label={`${p.label}: ${p[valueKey]} ${name.toLowerCase()}`}
               onPointerEnter={() => setActive(i)}
               onPointerLeave={() => setActive(null)}

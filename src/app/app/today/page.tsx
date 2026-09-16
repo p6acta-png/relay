@@ -226,7 +226,7 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
                                 height: Math.max(22, (minutes / 60) * HOUR_PX - 2),
                               }}
                             >
-                              <span className="tabular font-mono text-[0.625rem] text-ink-3">
+                              <span className="tabular font-mono text-[0.625rem] text-ink-2">
                                 {formatInZone(booking.startsAt, tz, 'HH:mm')}
                               </span>{' '}
                               <span className="font-medium">{booking.service.name}</span>

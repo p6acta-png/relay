@@ -73,7 +73,7 @@ export function FilterTabs({
             <span
               className={cx(
                 'tabular rounded-[var(--radius-sm)] px-1.5 font-mono text-[0.6875rem] leading-5',
-                tab.urgent ? 'bg-signal-500 text-white' : 'bg-sunken text-ink-2',
+                tab.urgent ? 'bg-signal-700 text-white' : 'bg-sunken text-ink-2',
               )}
             >
               {tab.count}

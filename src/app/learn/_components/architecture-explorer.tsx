@@ -173,7 +173,7 @@ export function ArchitectureExplorer({
                                   className={cx(
                                     'flex size-4 items-center justify-center rounded-full font-mono text-[0.5625rem]',
                                     n - 1 === step
-                                      ? 'bg-signal-500 text-white'
+                                      ? 'bg-signal-700 text-white'
                                       : n - 1 < step
                                         ? 'bg-ink text-paper'
                                         : 'bg-sunken text-ink-2',

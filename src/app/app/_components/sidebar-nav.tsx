@@ -76,7 +76,7 @@ export function SidebarNav({
                       <span
                         className={cx(
                           'tabular min-w-5 rounded-[var(--radius-sm)] px-1.5 text-center font-mono text-[0.6875rem] leading-5',
-                          item.count === 'needsHuman' ? 'bg-signal-500 text-white' : 'bg-ink/8 text-ink-2',
+                          item.count === 'needsHuman' ? 'bg-signal-700 text-white' : 'bg-ink/8 text-ink-2',
                         )}
                       >
                         {count}

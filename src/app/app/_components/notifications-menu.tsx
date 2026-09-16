@@ -47,7 +47,7 @@ export function NotificationsMenu({ items, unread }: { items: NotificationView[]
         <span className="sr-only">Notifications{unread > 0 ? `, ${unread} unread` : ''}</span>
         {unread > 0 && (
           <span
-            className="tabular absolute top-1 right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-signal-500 px-1 font-mono text-[0.625rem] text-white"
+            className="tabular absolute top-1 right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-signal-700 px-1 font-mono text-[0.625rem] text-white"
             aria-hidden
           >
             {unread > 9 ? '9+' : unread}

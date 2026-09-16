@@ -11,7 +11,7 @@ export function ChatPanel() {
   const chat = useChat();
   const { isOpen, close } = chat;
   const titleId = useId();
-  const listRef = useRef<HTMLOListElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const [draft, setDraft] = useState('');
 
@@ -88,30 +88,33 @@ export function ChatPanel() {
         </button>
       </header>
 
-      <ol
+      {/* role="log" goes on a wrapper: on the <ol> itself it would replace the list semantics. */}
+      <div
         ref={listRef}
         role="log"
         aria-live="polite"
         aria-relevant="additions"
         aria-label="Conversation"
-        className="flex-1 space-y-4 overflow-y-auto px-5 py-5"
+        className="flex-1 overflow-y-auto px-5 py-5"
       >
-        {chat.messages.map((message, index) => (
-          <MessageItem
-            key={message.id}
-            message={message}
-            interactive={index > lastCustomerIndex && !chat.sending}
-            timeZone={chat.timeZone}
-          />
-        ))}
-        {chat.sending && (
-          <li className="flex items-center gap-1.5 text-xs text-ink-3" aria-label="Relay is replying">
-            <span className="size-1.5 animate-pulse rounded-full bg-ink-3" />
-            <span className="size-1.5 animate-pulse rounded-full bg-ink-3 [animation-delay:150ms]" />
-            <span className="size-1.5 animate-pulse rounded-full bg-ink-3 [animation-delay:300ms]" />
-          </li>
-        )}
-      </ol>
+        <ol className="space-y-4">
+          {chat.messages.map((message, index) => (
+            <MessageItem
+              key={message.id}
+              message={message}
+              interactive={index > lastCustomerIndex && !chat.sending}
+              timeZone={chat.timeZone}
+            />
+          ))}
+          {chat.sending && (
+            <li className="flex items-center gap-1.5 text-xs text-ink-3" aria-label="Relay is replying">
+              <span className="size-1.5 animate-pulse rounded-full bg-ink-3" />
+              <span className="size-1.5 animate-pulse rounded-full bg-ink-3 [animation-delay:150ms]" />
+              <span className="size-1.5 animate-pulse rounded-full bg-ink-3 [animation-delay:300ms]" />
+            </li>
+          )}
+        </ol>
+      </div>
 
       {chat.notice && (
         <p
