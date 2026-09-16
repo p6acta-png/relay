@@ -27,10 +27,10 @@ export const DEMO_ACCOUNTS = [
     note: 'Staff — inbox, bookings and tasks only',
   },
   {
-    email: 'sofie@bakgarden.example',
+    email: 'sofie@tyttebaer.example',
     name: 'Sofie Lund',
     role: 'OWNER',
-    business: 'Bakgården Frisør',
+    business: 'Salong Tyttebær',
     note: 'A second business — proves data isolation',
   },
 ] as const;

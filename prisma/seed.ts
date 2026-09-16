@@ -1,10 +1,10 @@
 /**
  * Demo data: `npm run db:seed` (also run by `npm run setup`).
  *
- * WARNING: empties every table in the database DATABASE_URL points at, then creates:
+ * WARNING: empties every table in the database DATABASE_OWNER_URL points at, then creates:
  *  - Eik & Kant, a fictional bike and ski workshop in Oslo, with staff, hours, services, FAQs,
  *    automations and ~7 weeks of bookings, conversations, leads, tasks and automation runs;
- *  - Bakgården Frisør, a small second business used to demonstrate data isolation.
+ *  - Salong Tyttebær, a small second business used to demonstrate data isolation.
  *
  * History is generated with a seeded random generator, relative to today, so the dashboard
  * always has a realistic "today". Customer messages are interpreted by the real demo AI.
@@ -16,6 +16,24 @@ import type { Prisma } from '@/generated/prisma/client';
 import type { AutomationTrigger } from '@/generated/prisma/enums';
 
 process.loadEnvFile(path.resolve(import.meta.dirname, '../.env'));
+
+// The seed wipes the database and creates accounts whose password is published in this repository,
+// so it only ever runs against a local database outside production.
+{
+  const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);
+  const remote = ['DATABASE_URL', 'DATABASE_OWNER_URL'].filter((key) => {
+    const value = process.env[key];
+    return !value || !LOCAL_HOSTS.has(new URL(value).hostname);
+  });
+  if (process.env.NODE_ENV === 'production' || remote.length > 0) {
+    console.error(
+      `Refusing to seed: demo data may only be written to a local database outside production (${
+        remote.length > 0 ? `${remote.join(' and ')} not on localhost` : 'NODE_ENV=production'
+      }).`,
+    );
+    process.exit(1);
+  }
+}
 
 const { enterTenant, prisma } = await import('@/lib/db');
 /** One long transaction per business: all of its demo data appears, or none of it. */
@@ -1512,18 +1530,18 @@ async function automationRun(
 }
 
 async function seedSalon(users: Map<string, { id: string; name: string }>) {
-  console.log('Creating Bakgården Frisør…');
+  console.log('Creating Salong Tyttebær…');
   await transaction(async (tx) => {
     const org = await tx.organization.create({
       data: {
-        slug: 'bakgarden-frisor',
-        name: 'Bakgården Frisør',
-        tagline: 'A small hair salon in a Grünerløkka backyard',
+        slug: 'salong-tyttebaer',
+        name: 'Salong Tyttebær',
+        tagline: 'A small hair salon on Grünerløkka',
         description:
           'Cuts, colour and beard trims. Fictional business used to show that businesses on Relay never see each other’s data.',
         city: 'Oslo',
         addressLine: 'Grünerløkka',
-        contactEmail: 'hei@bakgarden.example',
+        contactEmail: 'hei@tyttebaer.example',
         openingHours: [2, 3, 4, 5]
           .map((weekday) => ({ weekday, opens: 600, closes: 1080 }))
           .concat([{ weekday: 6, opens: 600, closes: 840 }]),
@@ -1533,7 +1551,7 @@ async function seedSalon(users: Map<string, { id: string; name: string }>) {
     const scope = await enterTenant(tx, org.id);
     const { db, organizationId } = scope;
     const owner = await tx.membership.create({
-      data: { organizationId, userId: users.get('sofie@bakgarden.example')!.id, role: 'OWNER' },
+      data: { organizationId, userId: users.get('sofie@tyttebaer.example')!.id, role: 'OWNER' },
     });
     const sofie = await db.staffMember.create({
       data: { organizationId, displayName: 'Sofie Lund', title: 'Hairdresser', membershipId: owner.id },
@@ -1619,7 +1637,7 @@ async function seedSalon(users: Map<string, { id: string; name: string }>) {
     }
     await audit(scope, org.createdAt, {
       actorType: 'USER',
-      actorId: users.get('sofie@bakgarden.example')!.id,
+      actorId: users.get('sofie@tyttebaer.example')!.id,
       actorLabel: 'Sofie Lund',
       action: 'organization.created',
       entityType: 'Organization',

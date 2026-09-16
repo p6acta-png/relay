@@ -47,12 +47,12 @@ businesses. `npm run dev` starts the database if needed, then Next.js. Stop the 
 
 All use the password **`relay-demo-2026`**.
 
-| Email                      | Business         | Role  | Sees                                  |
-| -------------------------- | ---------------- | ----- | ------------------------------------- |
-| `ingrid@eikogkant.example` | Eik & Kant       | Owner | Everything                            |
-| `amina@eikogkant.example`  | Eik & Kant       | Admin | Setup, automations, team (not owners) |
-| `jonas@eikogkant.example`  | Eik & Kant       | Staff | Inbox, bookings, leads, tasks only    |
-| `sofie@bakgarden.example`  | Bakgården Frisør | Owner | A second business — proves isolation  |
+| Email                      | Business        | Role  | Sees                                  |
+| -------------------------- | --------------- | ----- | ------------------------------------- |
+| `ingrid@eikogkant.example` | Eik & Kant      | Owner | Everything                            |
+| `amina@eikogkant.example`  | Eik & Kant      | Admin | Setup, automations, team (not owners) |
+| `jonas@eikogkant.example`  | Eik & Kant      | Staff | Inbox, bookings, leads, tasks only    |
+| `sofie@tyttebaer.example`  | Salong Tyttebær | Owner | A second business — proves isolation  |
 
 ### Where to go
 

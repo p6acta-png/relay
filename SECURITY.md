@@ -77,6 +77,8 @@ Browser tests check the production cookie flags (`tests/e2e/security.spec.ts`).
 
 - Every secret token (sessions, invites, conversation access, booking manage links) is stored as a SHA-256 hash.
 - `.env` is git-ignored; `npm run setup` generates random local secrets. `.env.example` contains placeholders only.
+- The demo password is public by design, so the seed script refuses to run against a non-localhost database or with
+  `NODE_ENV=production`; the local database script (`scripts/db.mjs`) likewise only manages localhost.
 - Audit metadata is schema-restricted to identifiers, enums, numbers and short strings without `@`; the app role
   cannot update, delete or truncate the audit log.
 - Logs redact keys such as password, token, cookie, email, phone and message body, and mask email and phone

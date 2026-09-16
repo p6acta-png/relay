@@ -50,7 +50,7 @@ test('a new owner signs up, sets up a business, and logs out', async ({ page }) 
 });
 
 test('each business only sees its own data', async ({ page }) => {
-  await logIn(page, 'sofie@bakgarden.example');
+  await logIn(page, 'sofie@tyttebaer.example');
   await page.goto('/app/customers');
   await expect(page.getByRole('main')).not.toContainText('eikogkant');
   await page.goto('/app/setup/services');
