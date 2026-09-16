@@ -14,6 +14,7 @@ import { validateSessionToken } from '@/modules/auth/sessions';
  */
 export const SESSION_COOKIE = SESSION_COOKIE_NAME;
 
+// #region learn:session-cookie
 export async function setSessionCookie(token: string, expiresAt: Date) {
   (await cookies()).set(SESSION_COOKIE, token, {
     httpOnly: true,
@@ -23,6 +24,7 @@ export async function setSessionCookie(token: string, expiresAt: Date) {
     expires: expiresAt,
   });
 }
+// #endregion learn:session-cookie
 
 export async function clearSessionCookie() {
   (await cookies()).delete(SESSION_COOKIE);

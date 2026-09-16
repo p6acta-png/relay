@@ -34,6 +34,7 @@ function sign(timestamp: string): string {
   return hmacIdentifier(`form:${timestamp}`, env.APP_SECRET);
 }
 
+// #region learn:challenge
 export const demoChallengeProvider: ChallengeProvider = {
   name: 'demo',
   isDemo: true,
@@ -56,6 +57,7 @@ export const demoChallengeProvider: ChallengeProvider = {
     return { ok: true };
   },
 };
+// #endregion learn:challenge
 
 export function getChallengeProvider(): ChallengeProvider {
   // Only 'demo' exists in this build; env validation rejects anything else.

@@ -48,6 +48,7 @@ export async function hashPassword(
   return ['scrypt', params.N, params.r, params.p, salt.toString('base64'), key.toString('base64')].join('$');
 }
 
+// #region learn:verify-password
 export async function verifyPassword(password: string, stored: string): Promise<boolean> {
   const parts = stored.split('$');
   if (parts.length !== 6 || parts[0] !== 'scrypt') return false;
@@ -60,6 +61,7 @@ export async function verifyPassword(password: string, stored: string): Promise<
   // Constant-time comparison: how long this takes must not reveal how many bytes matched.
   return expected.length === actual.length && timingSafeEqual(expected, actual);
 }
+// #endregion learn:verify-password
 
 /** True when a stored hash uses weaker parameters than the current standard (rehash on login). */
 export function needsRehash(stored: string, params: ScryptParams = STANDARD_PARAMS): boolean {

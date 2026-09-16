@@ -12,6 +12,7 @@ import { getCurrentSession } from './session';
  * Built only from the verified session cookie and the memberships table — nothing the browser
  * sends can choose the organization.
  */
+// #region learn:dashboard-context
 export const getDashboardContext = cache(async () => {
   const session = await getCurrentSession();
   if (!session) return { status: 'signed-out' as const };
@@ -37,6 +38,7 @@ export const getDashboardContext = cache(async () => {
     memberships,
   };
 });
+// #endregion learn:dashboard-context
 
 export type DashboardContext = Extract<Awaited<ReturnType<typeof getDashboardContext>>, { status: 'ok' }>;
 

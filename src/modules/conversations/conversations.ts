@@ -38,6 +38,7 @@ export async function createConversation(
   return { conversation, token, events: [event] };
 }
 
+// #region learn:find-conversation
 /** Finds a conversation from the id and secret token held by the customer's browser. */
 export async function findConversationForCustomer(
   { db, organizationId }: TenantScope,
@@ -50,6 +51,7 @@ export async function findConversationForCustomer(
     include: { customer: { select: { id: true, name: true, email: true, phone: true } } },
   });
 }
+// #endregion learn:find-conversation
 
 export async function addMessage(
   { db, organizationId }: TenantScope,

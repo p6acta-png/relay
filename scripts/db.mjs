@@ -178,7 +178,19 @@ async function start() {
   if (isRunning()) {
     log(`Already running on port ${config.port}.`);
   } else {
-    const { code, output } = run('pg_ctl', ['-D', DATA_DIR, '-l', SERVER_LOG, '-w', '-t', '60', 'start']);
+    // `-p` from .env wins over the port written at init, so changing .env is enough to move ports.
+    const { code, output } = run('pg_ctl', [
+      '-D',
+      DATA_DIR,
+      '-l',
+      SERVER_LOG,
+      '-o',
+      `-p ${config.port}`,
+      '-w',
+      '-t',
+      '60',
+      'start',
+    ]);
     if (code !== 0) {
       throw new Error(
         `Could not start PostgreSQL.\n${output}\n` +

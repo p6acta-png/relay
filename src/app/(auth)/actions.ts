@@ -11,11 +11,13 @@ import { field, runAction, type ActionResult } from '@/server/actions';
 import { clientIp } from '@/server/request';
 import { clearSessionCookie, getCurrentSession, setSessionCookie } from '@/server/session';
 
+// #region learn:safe-next
 /** Only allow redirects to our own pages — never to another site (open-redirect protection). */
 function safeNext(value: string): string | null {
   if (!value.startsWith('/') || value.startsWith('//') || value.includes('\\')) return null;
   return /^\/(app|invite|onboarding)(\/|\?|$)/.test(value) ? value : null;
 }
+// #endregion learn:safe-next
 
 // #region learn:login-action
 export async function loginAction(_previous: ActionResult, form: FormData): Promise<ActionResult> {

@@ -266,6 +266,7 @@ export async function decideBooking(
   return { result: { status }, events };
 }
 
+// #region learn:cancel-booking
 export async function cancelBooking(
   scope: TenantScope,
   ctx: ActorContext,
@@ -291,6 +292,7 @@ export async function cancelBooking(
       );
     }
   }
+  // #endregion learn:cancel-booking
 
   const { count } = await scope.db.booking.updateMany({
     where: { id: booking.id, organizationId: scope.organizationId, status: { in: ACTIVE } },

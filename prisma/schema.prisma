@@ -579,6 +579,8 @@ model Notification {
 enum EmailStatus {
   /// Demo provider: stored in the in-app outbox, not sent.
   STORED_IN_OUTBOX
+  /// Real provider: waiting for the delivery worker.
+  QUEUED
   SENT
   FAILED
 }

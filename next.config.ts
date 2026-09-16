@@ -3,6 +3,8 @@ import type { NextConfig } from 'next';
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
+  // Don't let `next dev` write AGENTS.md/CLAUDE.md into the repo; the project documents itself in README and /learn.
+  agentRules: false,
   // Static security headers for every response. The Content-Security-Policy needs a fresh
   // nonce per request, so it is set in src/proxy.ts instead.
   async headers() {

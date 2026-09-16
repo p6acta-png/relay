@@ -47,6 +47,7 @@ const messageSchema = z.object({
   related: z.object({ type: z.string().max(40), id: z.uuid() }).optional(),
 });
 
+// #region learn:queue-email
 export async function queueEmail({ db, organizationId }: TenantScope, message: EmailMessage) {
   const parsed = messageSchema.parse(message);
   const provider = getEmailProvider();
@@ -57,13 +58,14 @@ export async function queueEmail({ db, organizationId }: TenantScope, message: E
       subject: parsed.subject,
       textBody: parsed.text,
       provider: provider.name,
-      status: provider.isDemo ? 'STORED_IN_OUTBOX' : 'SENT',
+      status: provider.isDemo ? 'STORED_IN_OUTBOX' : 'QUEUED',
       relatedType: parsed.related?.type,
       relatedId: parsed.related?.id,
     },
     select: { id: true, status: true },
   });
 }
+// #endregion learn:queue-email
 
 export async function listOutbox({ db, organizationId }: TenantScope, limit = 50) {
   return db.outboundEmail.findMany({

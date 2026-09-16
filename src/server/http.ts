@@ -35,12 +35,14 @@ export function clientIpFrom(request: Request): string {
  * Only accept state-changing requests that come from our own pages.
  * Browsers always send Origin on cross-site POSTs, so a mismatch means another site is trying.
  */
+// #region learn:same-origin
 export function assertSameOrigin(request: Request): void {
   const origin = request.headers.get('origin');
   if (!origin) return; // Non-browser clients (tests, curl) don't send Origin; the token still protects them.
   const allowed = new Set([new URL(env.APP_URL).origin, new URL(request.url).origin]);
   if (!allowed.has(origin)) throw new AppError('FORBIDDEN', 'Requests from other sites are not allowed.');
 }
+// #endregion learn:same-origin
 
 export async function readJson(request: Request, maxBytes = 16_000): Promise<unknown> {
   if (!request.headers.get('content-type')?.includes('application/json')) {
